@@ -19,5 +19,5 @@ JSLT GitHub: https://github.com/schibsted/jslt
 | name | comment |
 | --- | --- |
 | `script.url` | 通过url获取`jslt`脚本,不能与`script.text`同时使用 |
-| `script.text` | `jslt`脚本,不能与`script.text`同时使用 |
+| `script.text` | `jslt`脚本,不能与`script.url`同时使用 |
 | `charset` | 获取的`jslt`脚本编码，如果收到的是byte[]转为json字符串时候的编码,默认UTF-8 |
