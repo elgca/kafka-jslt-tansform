@@ -8,14 +8,18 @@ import org.apache.commons.io.IOUtils;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.ConnectRecord;
+import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
 import org.apache.kafka.connect.transforms.util.SimpleConfig;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public abstract class JSLTTransformation<R extends ConnectRecord<R>> implements Transformation<R> {
@@ -43,7 +47,9 @@ public abstract class JSLTTransformation<R extends ConnectRecord<R>> implements 
                     "UTF-8",
                     ConfigDef.Importance.HIGH,
                     "byte[] to string charset"
-            );
+            )
+
+            ;
 
 
     private String charset = "UTF-8";
@@ -66,24 +72,84 @@ public abstract class JSLTTransformation<R extends ConnectRecord<R>> implements 
         if (_value == null) {
             return record;
         }
-        String value;
-        if (_value instanceof String) {
-            value = (String) _value;
-        } else if (_value instanceof byte[]) {
-            try {
-                value = new String((byte[]) _value, charset);
-            } catch (UnsupportedEncodingException e) {
-                throw new DataException(e);
-            }
-        } else {
-            throw new DataException("Only String/byte[] objects supported, found:" + _value.getClass().getName());
-        }
+        Schema schema = operatingSchema(record);
+        JsonNode node;
         try {
-            JsonNode node = mapper.readTree(value);
+            if (schema != null) {
+                switch (schema.type()) {
+                    case BYTES:
+                        node = mapper.readTree((byte[]) _value);
+                        break;
+                    case STRING:
+                        node = mapper.readTree((String) _value);
+                        break;
+                    case STRUCT:
+                        node = mapper.valueToTree(structToMap((Struct) _value));
+                        break;
+                    default:
+                        throw new UnsupportedOperationException("Only String/byte[] objects supported, found:" + _value.getClass().getName());
+                }
+            } else if (_value instanceof Map) {
+                node = mapper.valueToTree(_value);
+            } else if (_value instanceof String) {
+                node = mapper.readTree((String) _value);
+            } else if (_value instanceof byte[]) {
+                node = mapper.readTree((byte[]) _value);
+            } else {
+                throw new UnsupportedOperationException("Only String/byte[]/Map objects supported, found:" + _value.getClass().getName());
+            }
             JsonNode output = jslt.apply(node);
-            return newRecord(record, null, mapper.writeValueAsString(output));
+            return newRecord(record, null, mapper.convertValue(output, Map.class));
         } catch (Exception e) {
             throw new DataException(e);
+        }
+    }
+
+    private Map<String, Object> structToMap(Struct struct) {
+        Schema schema = struct.schema();
+        Map<String, Object> rslt = new LinkedHashMap<>();
+        for (Field field : schema.fields()) {
+            if (field.schema().type() == Schema.Type.STRUCT) {
+                rslt.put(field.name(), structToMap((Struct) struct.get(field)));
+            } else {
+                rslt.put(field.name(), struct.get(field));
+            }
+        }
+        return rslt;
+    }
+
+    Object convertValue(JsonNode jsonValue) {
+        switch (jsonValue.getNodeType()) {
+            case NULL:
+                return null;
+            case BOOLEAN:
+                return jsonValue.booleanValue();
+            case NUMBER:
+                if (jsonValue.isIntegralNumber())
+                    return jsonValue.longValue();
+                else
+                    return jsonValue.doubleValue();
+            case ARRAY:
+                ArrayList<Object> result = new ArrayList<>();
+                for (JsonNode elem : jsonValue) {
+                    result.add(convertValue(elem));
+                }
+                return result;
+            case OBJECT:
+                Map<Object, Object> slt = new LinkedHashMap<>();
+                Iterator<Map.Entry<String, JsonNode>> fieldIt = jsonValue.fields();
+                while (fieldIt.hasNext()) {
+                    Map.Entry<String, JsonNode> entry = fieldIt.next();
+                    slt.put(entry.getKey(), convertValue(entry.getValue()));
+                }
+                return slt;
+            case STRING:
+                return jsonValue.textValue();
+            case BINARY:
+            case MISSING:
+            case POJO:
+            default:
+                return null;
         }
     }
 

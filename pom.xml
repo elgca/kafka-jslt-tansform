@@ -28,12 +28,12 @@
     </licenses>
 
     <dependencies>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>connect-api</artifactId>
-            <version>${kafkaconnect.version}</version>
-            <scope>provided</scope>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.apache.kafka</groupId>-->
+            <!--<artifactId>connect</artifactId>-->
+            <!--<version>${kafkaconnect.version}</version>-->
+            <!--<scope>provided</scope>-->
+        <!--</dependency>-->
         <!-- https://mvnrepository.com/artifact/org.apache.kafka/connect-transforms -->
         <dependency>
             <groupId>org.apache.kafka</groupId>
