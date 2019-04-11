@@ -21,7 +21,6 @@ JSLT GitHub: https://github.com/schibsted/jslt
 | `script.url` | 通过url获取`jslt`脚本,不能与`script.text`同时使用 |
 | `script.text` | `jslt`脚本,不能与`script.url`同时使用 |
 | `charset` | 编码，脚本编码和以byte[]形式接受数据的string编码 |
->>>>>>> 0272b6c02ed09b63a181c1219e645fdad1fbcd7e
 
 # 功能更新
 
