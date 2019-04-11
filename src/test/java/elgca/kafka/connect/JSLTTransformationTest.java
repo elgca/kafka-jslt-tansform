@@ -3,6 +3,7 @@ package elgca.kafka.connect;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
@@ -13,6 +14,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -31,6 +33,19 @@ public class JSLTTransformationTest {
     @After
     public void teardown() {
         xform.close();
+    }
+
+    @Test
+    public void configTest() throws Exception {
+        try {
+            Map<String,String> conf = new LinkedHashMap<>();
+            conf.put("script.url", script.toString());
+            conf.put("script.text", IOUtils.toString(script));
+            xform.configure(conf);
+        } catch (ConfigException e) {
+            return;
+        }
+        throw new Exception("ERROR Config");
     }
 
     @Test
